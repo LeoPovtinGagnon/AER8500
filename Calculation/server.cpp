@@ -4,13 +4,15 @@
 #include <cstring>
 #include <unistd.h>
 #include <arpa/inet.h>
+#include <cstdlib> // Pour rand()
+#include <ctime>   // Pour time()
 
-void start_server(const std::string& server_ip, int server_port) {
+int start_server(const std::string& server_ip, int server_port) {
     // Création du socket
     int server_socket = socket(AF_INET, SOCK_STREAM, 0);
     if (server_socket < 0) {
         std::cerr << "Erreur lors de la création du socket." << std::endl;
-        return;
+        return -1;
     }
 
     // Paramétrage de l'adresse du serveur
@@ -24,14 +26,14 @@ void start_server(const std::string& server_ip, int server_port) {
     if (bind(server_socket, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {
         std::cerr << "Erreur lors du bind." << std::endl;
         close(server_socket);
-        return;
+        return -1;
     }
 
     // Écouter les connexions entrantes
     if (listen(server_socket, 3) < 0) {
         std::cerr << "Erreur lors de l'écoute des connexions." << std::endl;
         close(server_socket);
-        return;
+        return -1;
     }
 
     std::cout << "Serveur en attente de connexion..." << std::endl;
@@ -43,11 +45,22 @@ void start_server(const std::string& server_ip, int server_port) {
     if (client_socket < 0) {
         std::cerr << "Erreur lors de l'acceptation de la connexion." << std::endl;
         close(server_socket);
-        return;
+        return -1;
     }
 
     std::cout << "Client connecté." << std::endl;
 
     // Fermeture du socket serveur après la connexion
     close(server_socket);
+
+    return client_socket;  // Retourne le socket du client
+}
+void sendInt(int socket, int value) {
+    // Envoyer l'entier à travers le socket
+    int result = send(socket, reinterpret_cast<const char*>(&value), sizeof(value), 0);
+    if (result == -1) {
+        std::cerr << "Erreur lors de l'envoi de l'entier." << std::endl;
+    } else {
+        std::cout << "Entier envoyé : " << value << std::endl;
+    }
 }
