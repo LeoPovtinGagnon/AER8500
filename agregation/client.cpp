@@ -36,18 +36,3 @@ int start_client(const std::string& server_ip, int server_port) {
 }
 
 
-int receiveInt(int client_socket) {
-    int received_value;
-    ssize_t result = recv(client_socket, &received_value, sizeof(received_value), 0);  // Utilise directement l'adresse de received_value
-
-    if (result == -1) {
-        std::cerr << "Erreur lors de la réception de l'entier." << std::endl;
-        return -1;  // Retourne -1 si une erreur s'est produite
-    }
-    else if (result == 0) {
-        std::cerr << "Connexion fermée par le serveur." << std::endl;
-        return -1;
-    }
-
-    return received_value;
-}

@@ -55,12 +55,3 @@ int start_server(const std::string& server_ip, int server_port) {
 
     return client_socket;  // Retourne le socket du client
 }
-void sendInt(int socket, int value) {
-    // Envoyer l'entier à travers le socket
-    int result = send(socket, reinterpret_cast<const char*>(&value), sizeof(value), 0);
-    if (result == -1) {
-        std::cerr << "Erreur lors de l'envoi de l'entier." << std::endl;
-    } else {
-        std::cout << "Entier envoyé : " << value << std::endl;
-    }
-}

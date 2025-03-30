@@ -4,8 +4,8 @@ CFLAGS = -I/opt/homebrew/include/opencv4 -L/opt/homebrew/lib -std=c++11
 LIBS = -lopencv_core -lopencv_highgui -lopencv_imgproc
 
 # Fichiers source et output
-SRC = agregator.cpp  client.cpp
-OBJ = agregator.o client.o
+SRC = agregator.cpp  client.cpp A429.cpp UI.cpp
+OBJ = agregator.o client.o A429.o UI.o
 OUT = mon_programme
 
 # Règles de compilation
