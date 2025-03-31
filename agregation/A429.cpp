@@ -1,7 +1,7 @@
 #include "A429.hpp"
 #include <iostream>
 #include <cmath>
-#include <bitset>  // Inclure la bibliothèque bitset
+#include <bitset>  // Inclure la bibliothèque bitset 
 #include "agregator.hpp"
 
 

@@ -99,7 +99,13 @@ void receiveARINC429Message(int sock) {
             autopilot = (receivedData)>>8 & 1;
 
             // Extraire la puissance
-            desired_power = (receivedData >> 21) & 0x7F;  // Extraire les bits de données
+            if(desired_power == ((receivedData >> 21) & 0x7F)){
+                stagnantPowerFlag = true;
+            }  // Extraire les bits de données
+            else {
+                stagnantPowerFlag = false;
+            }
+            desired_power = (receivedData >> 21) & 0x7F;
             break;
         default:
             std::cout << "Label inconnu : " << label << std::endl;

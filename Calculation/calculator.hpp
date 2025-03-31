@@ -8,3 +8,5 @@ enum  avionicState {
 // Variable de l'état avionique
 extern avionicState currentState;
 extern bool autopilot;
+// Flag qui détecte quand la puissance est constante
+extern bool stagnantPowerFlag;
