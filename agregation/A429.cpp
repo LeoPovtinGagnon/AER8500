@@ -1,7 +1,7 @@
 #include "A429.hpp"
 #include <iostream>
 #include <cmath>
-#include <bitset>  // Inclure la bibliothèque bitset 
+#include <bitset>  
 #include "agregator.hpp"
 
 
@@ -28,6 +28,7 @@ uint32_t encodeARINC429Message(int label, int value) {
     int digit3 = 0;
     int digit4 = 0;
     switch (label) {
+
         case 1:  // Altitude
 
             encodedData |= 0x80; // Label 001
@@ -38,6 +39,7 @@ uint32_t encodeARINC429Message(int label, int value) {
             // Bits 30 et 31 à 1 pour indiquer un fonctionnement normal en BNR
             encodedData |= (3 << 29);
             break;
+
         case 2:  // Taux de montée
            
             // Encodage BCD sur 4 bits 
@@ -67,6 +69,7 @@ uint32_t encodeARINC429Message(int label, int value) {
                 encodedData |= (digit4 << 14);  // Bits 18-15 (4 bits)
             }
             break;
+
         case 3:  // Angle d'attaque
             encodedData |= 0xC0;  // Label 003 
 
@@ -94,6 +97,7 @@ uint32_t encodeARINC429Message(int label, int value) {
             encodedData |= (digit2 << 22);  // Bits 26-23
             encodedData |= (digit3 << 18);  // Bits 22-19
             break;
+
         case 10:  // Puissance
             encodedData |= 0x10; //Label 010 
 
@@ -105,6 +109,7 @@ uint32_t encodeARINC429Message(int label, int value) {
             // Bits 30 et 31 à 1 pour indiquer un fonctionnement normal en BNR
             encodedData |= (3 << 29);
             break;
+
         default:
             std::cerr << "Label inconnu, encodage par défaut" << std::endl;
             break;
@@ -130,6 +135,9 @@ void receiveARINC429Message(int sock) {
 
     // Extraction du label (bits 1 à 8)
     int label = receivedData & 0xFF;
+
+    // Variable intermédiaire pour valider l'état
+    int state = 0;
   
   
     // Variables pour le décodage 429 
@@ -151,7 +159,22 @@ void receiveARINC429Message(int sock) {
             system_altitude = (receivedData >> 12) & 0xFFFF;  // Extraire les bits de données
             
             // Extraire l'état du système
-            currentState = static_cast<avionicState>((receivedData >> 10) & 0x3);
+            state = ((receivedData >> 10) & 0x3);
+            // Cas de l'atterissage
+            if(state == 3){
+     
+                landing_flag = true;
+                // L'avion est de retour au sol
+                currentState = AU_SOL;
+              
+            }
+
+            // Gestion des états standards
+            else{
+
+                landing_flag = false;
+                currentState = static_cast<avionicState>((receivedData >> 10) & 0x3);
+            }
             
             break;
         
@@ -177,10 +200,43 @@ void receiveARINC429Message(int sock) {
         
              }
             break;
+
+        case 0xC0:
+        
+            // Extraire le bit de signe (bit 30)
+            isNegative = (receivedData & (1 << 29)) != 0;
+
+            // Extraire les chiffres encodés en BCD (bits 29-27, 26-23, 22-19)
+            digit1 = (receivedData >> 26) & 0x7;  // Chiffre des dizaines
+            digit2 = (receivedData >> 22) & 0xF;  // Chiffre des unités
+            digit3 = (receivedData >> 18) & 0xF;  // Chiffre des dixièmes
+
+            // Reconstituer l'angle en BCD
+            bcdValue = digit1 * 100 + digit2 * 10 + digit3;
+            system_angle = bcdValue / 10.0; //Passage en float
+
+            // Si l'angle est négatif, appliquer la correction
+            if (isNegative) {
+                system_angle = -1 * system_angle;
+            }
+
+            break;
      
         case 0x10:
             // Extraire la puissance
             system_power = (receivedData >> 21) & 0x7F;  // Extraire les bits de données
+            
+            
+            // Analyse du BNR pour détecter les problèmes liés à la puissance
+            // Cas problématiques
+            if(((receivedData >> 29) & 0x3) == 0){
+                power_problems_flag = true;
+            }
+            // Cas normal: pas de problème
+            else{
+                power_problems_flag = false;
+            }
+
             break;
         default:
             std::cout << "Label inconnu : " << label << std::endl;

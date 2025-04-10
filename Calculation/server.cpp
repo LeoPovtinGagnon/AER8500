@@ -1,4 +1,3 @@
-
 #include "server.hpp"
 #include <iostream>
 #include <cstring>
@@ -15,12 +14,20 @@ int start_server(const std::string& server_ip, int server_port) {
         return -1;
     }
 
+    // Activer SO_REUSEADDR pour permettre la réutilisation immédiate du port
+    int optval = 1;
+    if (setsockopt(server_socket, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)) < 0) {
+        std::cerr << "Erreur lors de l'activation de SO_REUSEADDR." << std::endl;
+        close(server_socket);
+        return -1;
+    }
+
     // Paramétrage de l'adresse du serveur
     struct sockaddr_in server_addr;
     std::memset(&server_addr, 0, sizeof(server_addr)); // Initialiser à 0
     server_addr.sin_family = AF_INET;
     server_addr.sin_port = htons(server_port);
-    server_addr.sin_addr.s_addr = INADDR_ANY;
+    server_addr.sin_addr.s_addr = INADDR_ANY; // Accepter les connexions depuis n'importe quelle adresse
 
     // Lier le socket à l'adresse
     if (bind(server_socket, (struct sockaddr*)&server_addr, sizeof(server_addr)) < 0) {

@@ -24,7 +24,7 @@ int power_UI = 0;
 void UI_init(){
 
     cv::namedWindow("Panneau de controle", cv::WINDOW_NORMAL);
-    cv::resizeWindow("Panneau de controle", 1200, 500);
+    cv::resizeWindow("Panneau de controle", 1500, 500);
 
     cv::createTrackbar("Altitude                  ", "Panneau de controle", &altitude_computed, ALTITUDE_RANGE, updateSliders);
     cv::createTrackbar("Taux de montee       ", "Panneau de controle", &ascentRate_computed, ASCENTRATE_RANGE, updateSliders);
@@ -75,12 +75,50 @@ void UI_Process(cv::Mat& image) {
     cv::putText(image, "Commande", cv::Point(20, 25), cv::FONT_HERSHEY_DUPLEX, 1.0, text_color, 2);
 
     // Zone d'affichage textuelle des valeurs actuelle de l'avion (reçues du calculateur)
-    cv::Rect rect2(10, 400, 500, 250); 
+    cv::Rect rect2(10, 480, 430, 250); 
     cv::rectangle(image, rect2, background_color, -1); 
-    cv::putText(image, "Valeurs actuelles", cv::Point(20, 390), cv::FONT_HERSHEY_DUPLEX, 1.0, text_color, 2);
-    cv::putText(image, system_altitude_text, cv::Point(20, 450), cv::FONT_HERSHEY_SIMPLEX, 0.8, text_color, 1);
-    cv::putText(image, system_climbRate_text, cv::Point(20, 510), cv::FONT_HERSHEY_SIMPLEX, 0.8, text_color, 1);
-    cv::putText(image, system_power_text, cv::Point(20, 570), cv::FONT_HERSHEY_SIMPLEX, 0.8, text_color, 1);
+    cv::putText(image, "Valeurs actuelles", cv::Point(20, 470), cv::FONT_HERSHEY_DUPLEX, 1.0, text_color, 2);
+    cv::putText(image, system_altitude_text, cv::Point(20, 530), cv::FONT_HERSHEY_SIMPLEX, 0.8, text_color, 1);
+    cv::putText(image, system_climbRate_text, cv::Point(20, 590), cv::FONT_HERSHEY_SIMPLEX, 0.8, text_color, 1);
+    cv::putText(image, system_power_text, cv::Point(20, 660), cv::FONT_HERSHEY_SIMPLEX, 0.8, text_color, 1);
+
+
+    // Zone d'affichage des messages d'avertissement contextuels
+    cv::Rect bordure_jaune(450, 480, 550, 250);
+    cv::Scalar jaune(58, 245, 235);
+    cv::rectangle(image, bordure_jaune, jaune, -1);
+    cv::Rect centre_noir(450 + 5, 480 + 5, 550 - 10, 250 - 10);
+    cv::Scalar noir(0, 0, 0);
+    cv::rectangle(image, centre_noir, noir, -1);
+    cv::putText(image, "Avertissements ", cv::Point(460, 470), cv::FONT_HERSHEY_DUPLEX, 1.0, text_color, 2);
+
+  
+    cv::Scalar rouge(0, 0, 255);
+    cv::Scalar blanc(0, 0, 255);
+    // Avertissement pour l'angle au décolage
+    if(!takeoffAngle_flag){
+        cv::putText(image, "ANGLE INVALIDE: ", cv::Point(465, 530), cv::FONT_HERSHEY_SIMPLEX, 0.8, rouge, 2);
+        cv::putText(image, "Il faut un angle positif pour decoller", cv::Point(465, 555), cv::FONT_HERSHEY_SIMPLEX, 0.8, text_color, 1);
+    }
+    // Avertissement pour le décrochage (15 degrés)
+    if(angle_UI > 14.9 && !autopilot){
+        cv::putText(image, "RISQUE DE DECROCHAGE", cv::Point(465, 530), cv::FONT_HERSHEY_SIMPLEX, 0.8, rouge, 2);
+        cv::putText(image, "Diminuez l'angle", cv::Point(465, 555), cv::FONT_HERSHEY_SIMPLEX, 0.8, text_color, 1);
+    }
+    // Avertissements de puissance
+    if(power_problems_flag && currentState != AU_SOL){
+        if(autopilot){
+            cv::putText(image, "VITESSE MAX ATTEINTE: ", cv::Point(465, 530), cv::FONT_HERSHEY_SIMPLEX, 0.8, rouge, 2);
+            cv::putText(image, "Vous pouvez diminuer la puissance", cv::Point(465, 555), cv::FONT_HERSHEY_SIMPLEX, 0.8, text_color, 1);
+        }
+        else{
+            cv::putText(image, "PUISSANCE INSUFFISANTE: ", cv::Point(465, 530), cv::FONT_HERSHEY_SIMPLEX, 0.8, rouge, 2);
+            cv::putText(image, "Augmentez l'angle ou diminuez la vitesse ", cv::Point(465, 555), cv::FONT_HERSHEY_SIMPLEX, 0.8, text_color, 1);
+        }
+        
+    }
+
+
 
     
     

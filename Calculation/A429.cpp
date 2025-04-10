@@ -6,6 +6,7 @@
 #include <bitset>
 #include  "calculator.hpp" 
 #include "A429.hpp"
+
 // Données de l'agrégateur
 uint32_t desired_altitude = 0;
 uint32_t desired_power = 0;
@@ -141,7 +142,7 @@ uint32_t encodeARINC429Message(int label, int value) {
             encodedData |= 0x80; //Label 001 
             // Encoder l'altitude dans les bits [13:28]
             encodedData |= (value & 0xFFFF) << 12;
-            // Encodage de l'état
+            // Encodage de l'état 
             encodedData |= (currentState & 0x3) << 10;
             // Bits 30 et 31 à 1 pour indiquer un fonctionnement normal en BNR
             encodedData |= (3 << 29);
@@ -173,6 +174,26 @@ uint32_t encodeARINC429Message(int label, int value) {
                 encodedData |= (digit4 << 14);  // Bits 18-15 (4 bits)
             }
             break;
+        case 3:  // Angle d'attaque
+
+            encodedData |= 0xC0;  // Label 003 
+
+            bcdValue = value; 
+            // Si l'angle est négatif (-16.0° à -0.1°)
+            if (bcdValue < 0.0) {  
+                encodedData |= (3 << 29); // Bit de signe (30) à 1 pour indiquer un angle négatif (on mets aussi le bit 31 à 1 car sinon ça veut dire NCD)
+                bcdValue = std::abs(bcdValue);
+            }
+            // Extraction des chiffres en BCD
+            digit1 = (bcdValue / 100) % 10;  // Dizaines
+            digit2 = (bcdValue / 10) % 10;   // Unités
+            digit3 = bcdValue % 10;          // Dizièmes
+
+            // Placement dans les bits
+            encodedData |= (digit1 << 26);  // Bits 29-27
+            encodedData |= (digit2 << 22);  // Bits 26-23
+            encodedData |= (digit3 << 18);  // Bits 22-19
+            break;
 
         case 10:  // Puissance
 
@@ -180,8 +201,14 @@ uint32_t encodeARINC429Message(int label, int value) {
 
             // Encoder la puissance dans les bits [22:28]
             encodedData |= (value & 0xFFFF) << 21;
+
+            // Utilisation des bits SSM pour indiquer une puissance invalide
+            if(!(notEnoughPowerFlag || tooMuchPowerFlag)){
+
             // Bits 30 et 31 à 1 pour indiquer un fonctionnement normal en BNR
             encodedData |= (3 << 29);
+
+            }
 
             break;
         
