@@ -188,7 +188,7 @@ void UI_Process(cv::Mat& image) {
     cv::putText(image, step_text_P, cv::Point(800, 195), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(255, 255, 255), 2);
     cv::putText(image, step_text_M, cv::Point(900, 195), cv::FONT_HERSHEY_SIMPLEX, 1.0, cv::Scalar(255, 255, 255), 2);
       
-  
+  // too much magic numbers....
     // Affiche de tous les boutons lorsqu'au sol
     if (currentState == AU_SOL) {
 
@@ -255,7 +255,7 @@ void onMouse(int event, int x, int y, int, void*) {
             }
             if (x >= 900 && x <= 1000 && y >= 30 && y <= 60) { // -10
                 altitude_computed = std::max(0, altitude_computed - 10);
-                cv::setTrackbarPos("Altitude                  ", "Panneau de controle", altitude_computed);
+                cv::setTrackbarPos("Altitude                  ","Panneau de controle", altitude_computed);
             }
             // Puissance
             if (x >= 600 && x <= 700 && y >= 240 && y <= 270) {

@@ -79,42 +79,42 @@ void altitudeMonitor() {
             stateManager();  
         }
         if(currentState == VOL_CROISIERE && desired_angle < 0.0 && !autopilot){
-            std::cout<<"coc"<<std::endl;
+
             stateManager();
         }
 
         if(currentState != VOL_CROISIERE){
-        // Mode autopilote (commande de l'altitude et de la puissance)
-        if(autopilot){
-            // Descente
-            if (live_altitude > desired_altitude){
-        
-                descendingFlag = true;
-            }
-            // Montée
-            else {
+            // Mode autopilote (commande de l'altitude et de la puissance)
+            if(autopilot){
+                // Descente
+                if (live_altitude > desired_altitude){
+            
+                    descendingFlag = true;
+                }
+                // Montée
+                else {
 
-            descendingFlag = false;
+                descendingFlag = false;
 
+                }
+                // Appel le process qui gère l'angle d'attaque et le taux de montée en fonction de l'altitude et de la puissance
+                autopilotManager();      
             }
-            // Appel le process qui gère l'angle d'attaque et le taux de montée en fonction de l'altitude et de la puissance
-            autopilotManager();      
-        }
-        // Mode manuel (commande directe de l'angle d'attaque et du taux de montée)
-        else{
-            // Descente
-            if(live_angle < 0.0){
-                
-                descendingFlag = true;
-            }
-            // Montée
+            // Mode manuel (commande directe de l'angle d'attaque et du taux de montée)
             else{
+                // Descente
+                if(live_angle < 0.0){
+                    
+                    descendingFlag = true;
+                }
+                // Montée
+                else{
 
-                descendingFlag =false;
+                    descendingFlag =false;
+                }
+                // Appel le process qui gère le pilotage manuel
+                manualManager();
             }
-            // Appel le process qui gère le pilotage manuel
-            manualManager();
-        }
         }
 
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
@@ -253,6 +253,8 @@ void autopilotManager(){
     // Mesure de l'écart  entre l'altitude actuelle  et l'altitude désirée
     int altitudeGap = desired_altitude-live_altitude;
     altitudeGap = abs(altitudeGap);
+    std::cout<<"gap live: "<<altitudeGap<<std::endl;
+    std:: cout<<"descending: "<<descendingFlag<<std::endl;
 
     // Descente
     if(descendingFlag){
@@ -264,8 +266,9 @@ void autopilotManager(){
         }
         // Ajustement au pied près
         else if(altitudeGap < 5){
+            
                 
-            precise_angle = (0.3048 * -16.0)/(live_power*10);
+            precise_angle = (0.3048 * -16.0)/(((live_power*10)+0.00001));
         }
         // Ralentissement en approche de l'altitude désirée
         else {
@@ -286,9 +289,10 @@ void autopilotManager(){
 
         }
         // Ajustement au pied près
-        else if(altitudeGap < 5){
+        else if(altitudeGap < 3){
                 
-            precise_angle = (0.3048 * 16.0)/(live_power*10);
+            precise_angle = (0.3048 * 16.0)/((live_power*10)+0.00001); // Protection contre la division par 0
+            std::cout<< "PA: "<<precise_angle<< std::endl;
         }
         // Ralentissement en approche de l'altitude désirée
         else {
@@ -328,12 +332,13 @@ void receiveARINC429(int client_socket_429) {
 }
 
 int main() {
+    
+    std::thread receiveARINC429Thread(receiveARINC429, client_socket_429);
+    std::thread t2(server_thread_AFDX, server_ip, server_port_AFDX); // Serveur AFDX
     std::thread altitudeThread(altitudeUpdater);  // Démarrage du thread d'altitude
     altitudeThread.detach();  // On détache pour qu'il fonctionne en arrière-plan
     std::thread altitudeMonitorThread(altitudeMonitor);
     altitudeMonitorThread.detach();
-    std::thread receiveARINC429Thread(receiveARINC429, client_socket_429);
-    std::thread t2(server_thread_AFDX, server_ip, server_port_AFDX); // Serveur AFDX
 
     // Boucle d'exécution principale
     while (true) {

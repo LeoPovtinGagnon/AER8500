@@ -1,11 +1,11 @@
-# Compiler et linker OpenCV avec g++
+# Compiler et linker OpenCV avec g++ de façon portable
 CC = g++
-CFLAGS = -I/opt/homebrew/include/opencv4 -L/opt/homebrew/lib -std=c++11
-LIBS = -lopencv_core -lopencv_highgui -lopencv_imgproc
+CFLAGS = -std=c++11 `pkg-config --cflags opencv4`
+LIBS = `pkg-config --libs opencv4`
 
 # Fichiers source et output
-SRC = calculator.cpp  server.cpp A429.cpp 
-OBJ = calculator.o server.o A429.o 
+SRC = calculator.cpp  server.cpp A429.cpp AFDX.cpp
+OBJ = calculator.o server.o A429.o AFDX.o
 OUT = mon_programme
 
 # Règles de compilation

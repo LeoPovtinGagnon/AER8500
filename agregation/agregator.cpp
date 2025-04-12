@@ -58,10 +58,9 @@ void receiveARINC429Thread(int server_socket_429) {
     }
 }
 
-// Thread de d'envoi des commandes par ARINC429
+// Envoi des commandes par ARINC429
 void sendARINC429(int server_socket_429) {
-    
-  
+
         // Envoi des commandes les plus récentes
         // Altitude
         sendARINC429Message(1, altitude_computed, server_socket_429 );
@@ -77,7 +76,7 @@ void sendARINC429(int server_socket_429) {
 
 // Fonction qui gère le décolage
 void takeoffManager(){
-
+    
     if(landing_flag){
         cv::setTrackbarPos("Taux de montee       ", "Panneau de controle", 0);
         cv::setTrackbarPos("Angle d'attaque      ", "Panneau de controle", 160);
@@ -88,6 +87,7 @@ void takeoffManager(){
     if(currentState == AU_SOL & altitude_computed != 0 & ascentRate_computed == 0 & angle_computed == 160){
         autopilot = true;
         takeoffAngle_flag = true;
+       
     }
     // Angle d'attaque de décolage négatif: invalide
     if(currentState == AU_SOL & altitude_computed == 0 & ascentRate_computed != 0 & angle_computed < 160){
@@ -124,6 +124,7 @@ int main() {
     std::thread t2(client_thread_AFDX, server_ip, server_port_AFDX); // Client AFDX
     // Thread pour recevoir les données du calculateur
     std::thread receive429Thread(receiveARINC429Thread, server_socket_429);
+ 
 
     UI_init();
 
