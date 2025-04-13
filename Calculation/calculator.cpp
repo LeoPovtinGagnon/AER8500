@@ -4,10 +4,12 @@
 #include <chrono>
 #include "A429.hpp"
 #include "calculator.hpp"
+#include "AFDX.hpp"
 #include <stdlib.h>  
 #include <cmath>
 #include <atomic>
 #include <unistd.h> 
+#include <arpa/inet.h>
 
 
 
@@ -27,6 +29,10 @@ bool stagnantPowerFlag = false;
 bool tooMuchPowerFlag = false;
 // Détection d'une puissance insuffisante
 bool notEnoughPowerFlag = false;
+// Flag indiquant que la connexion AFDX est établie
+bool AFDXSucces = false;
+
+
 
 
 
@@ -41,12 +47,23 @@ int server_port_AFDX = 8081; // Port serveur pour AFDX
 // Démarre le serveur et récupère le client_socket_429
 int client_socket_429 = start_server(server_ip, server_port_429);
 int client_socket_AFDX = -1;
+
 void server_thread_AFDX(const std::string& server_ip, int server_port_AFDX) {
     client_socket_AFDX = start_server(server_ip, server_port_AFDX);
     if (client_socket_AFDX >= 0) {
         std::cout << "Connexion AFDX établie." << std::endl;
+        AFDXSucces = true;
         // Gérer la communication AFDX ici
         // Utilise client_socket_AFDX pour recevoir/envoyer des données
+    }
+    while (receiving) {
+
+        if(AFDXSucces){
+
+            receiveAFDXMessage(client_socket_AFDX);
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+       
     }
 }
 
@@ -253,8 +270,6 @@ void autopilotManager(){
     // Mesure de l'écart  entre l'altitude actuelle  et l'altitude désirée
     int altitudeGap = desired_altitude-live_altitude;
     altitudeGap = abs(altitudeGap);
-    std::cout<<"gap live: "<<altitudeGap<<std::endl;
-    std:: cout<<"descending: "<<descendingFlag<<std::endl;
 
     // Descente
     if(descendingFlag){
@@ -292,7 +307,6 @@ void autopilotManager(){
         else if(altitudeGap < 3){
                 
             precise_angle = (0.3048 * 16.0)/((live_power*10)+0.00001); // Protection contre la division par 0
-            std::cout<< "PA: "<<precise_angle<< std::endl;
         }
         // Ralentissement en approche de l'altitude désirée
         else {
@@ -324,19 +338,22 @@ void autopilotManager(){
  }
 
 
-// Thread de réception des données du calculateur
+// Thread de réception des données du calculateur via A429
 void receiveARINC429(int client_socket_429) {
     while (receiving) {
         receiveARINC429Message(client_socket_429);
     }
 }
 
+
 int main() {
     
+    // Démarage des threads  
     std::thread receiveARINC429Thread(receiveARINC429, client_socket_429);
-    std::thread t2(server_thread_AFDX, server_ip, server_port_AFDX); // Serveur AFDX
-    std::thread altitudeThread(altitudeUpdater);  // Démarrage du thread d'altitude
-    altitudeThread.detach();  // On détache pour qu'il fonctionne en arrière-plan
+    std::thread AFDXSocket(server_thread_AFDX, server_ip, server_port_AFDX); // Serveur AFDX
+    AFDXSocket.detach();
+    std::thread altitudeThread(altitudeUpdater);  
+    altitudeThread.detach();  
     std::thread altitudeMonitorThread(altitudeMonitor);
     altitudeMonitorThread.detach();
 
@@ -344,13 +361,12 @@ int main() {
     while (true) {
 
         stateManager();
-    
         SendValuesARINC429(client_socket_429);
+
       
 
     }
     receiving = false;
-    t2.join();
     receiveARINC429Thread.join();
     close(client_socket_429);
     close(client_socket_AFDX);

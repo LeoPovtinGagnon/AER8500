@@ -8,6 +8,7 @@
 #include "A429.hpp"
 #include "agregator.hpp"
 #include "UI.hpp"
+#include "AFDX.hpp"
 #include <atomic>
 
 // Variables transmises par le calculateur
@@ -19,6 +20,9 @@ int system_power = 0;
 // État avionique
 avionicState currentState = AU_SOL;
 
+// Flag indiquant que la connexion AFDX est établie
+bool AFDXSucces = false;
+
 // Constantes pour la connexion TCP
 std::string server_ip = "127.0.0.1";
 int server_port_429 = 8080;
@@ -27,13 +31,19 @@ int server_socket_429 = start_client(server_ip, server_port_429);
 int server_socket_AFDX = -1;
 
 void client_thread_AFDX(const std::string& server_ip, int server_port_AFDX) {
+
+    // Timer pour permettre de libérer les ressources du socket
     std::this_thread::sleep_for(std::chrono::seconds(2));
+
     server_socket_AFDX = start_client(server_ip, server_port_AFDX);
     std::cout<<"afdx"<<std::endl;
     if (server_socket_AFDX >= 0) {
         std::cout << "Connecté au serveur AFDX." << std::endl;
-      
+        // Flag indiquant que la connexion AFDX est établie
+        AFDXSucces = true;
+    
     }
+    
 }
 
 // Flag pour l'activation et la désactivation de l'autopilote
@@ -47,8 +57,10 @@ bool power_problems_flag = false;
 // Flag pour veiller à ce que l'angle d'attaque soit positif au décolage (faux si angle  négatif)
 bool takeoffAngle_flag = true;
 
-// Variable pour arrêter le thread de réception
+// Variable pour arrêter les threads de réception
 bool receiving = true;
+
+
 
 
 // Thread de réception des données du calculateur
@@ -122,6 +134,7 @@ void transitionManager(){
 int main() {
 
     std::thread t2(client_thread_AFDX, server_ip, server_port_AFDX); // Client AFDX
+    t2.detach();
     // Thread pour recevoir les données du calculateur
     std::thread receive429Thread(receiveARINC429Thread, server_socket_429);
  
@@ -135,6 +148,11 @@ int main() {
         takeoffManager();
         transitionManager();
         sendARINC429(server_socket_429);
+        if(AFDXSucces){
+            sendAFDXMessage(server_socket_AFDX);
+        }
+    
+     
         
 
         cv::imshow("Panneau de controle", image);
@@ -146,9 +164,9 @@ int main() {
             break;
         }
     }
-    t2.join();
-    receive429Thread.join();
+   
     cv::destroyAllWindows();
+    receive429Thread.join();
     close(server_socket_429);
     close(server_socket_AFDX);
     return 0;

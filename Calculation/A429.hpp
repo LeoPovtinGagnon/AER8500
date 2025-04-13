@@ -1,3 +1,4 @@
+#include <cmath>
 // Variables de l'agrégateur les plus récentes
 extern uint32_t desired_altitude;
 extern uint32_t desired_power;

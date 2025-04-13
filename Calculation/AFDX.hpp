@@ -1,0 +1,1 @@
+void receiveAFDXMessage(int sock);
