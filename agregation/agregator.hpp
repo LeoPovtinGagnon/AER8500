@@ -20,5 +20,6 @@ extern bool power_problems_flag;
 
 // Flag pour veiller à ce que l'angle d'attaque soit positif au décolage
 extern bool takeoffAngle_flag;
-
+// Bool à modifier pour choisir quel protocole recoit les données (redondance)
+extern bool protocolSelector;
 

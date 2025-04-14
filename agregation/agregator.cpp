@@ -17,6 +17,12 @@ float system_climbRate = 0.0;
 float system_angle = 0.0;
 int system_power = 0;
 
+ // Bool à modifier pour choisir quel protocole recoit les données (redondance)
+ bool protocolSelector = false; //True pour ARINC, FALSE pour AFDX
+
+// Variable pour arrêter les threads de réception
+bool receiving = true;
+
 // État avionique
 avionicState currentState = AU_SOL;
 
@@ -36,12 +42,22 @@ void client_thread_AFDX(const std::string& server_ip, int server_port_AFDX) {
     std::this_thread::sleep_for(std::chrono::seconds(2));
 
     server_socket_AFDX = start_client(server_ip, server_port_AFDX);
-    std::cout<<"afdx"<<std::endl;
     if (server_socket_AFDX >= 0) {
         std::cout << "Connecté au serveur AFDX." << std::endl;
         // Flag indiquant que la connexion AFDX est établie
         AFDXSucces = true;
     
+    }
+      while (receiving) {
+
+        if(AFDXSucces){
+
+            receiveAFDXMessage(server_socket_AFDX);
+        
+        
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+       
     }
     
 }
@@ -57,8 +73,7 @@ bool power_problems_flag = false;
 // Flag pour veiller à ce que l'angle d'attaque soit positif au décolage (faux si angle  négatif)
 bool takeoffAngle_flag = true;
 
-// Variable pour arrêter les threads de réception
-bool receiving = true;
+
 
 
 
@@ -66,7 +81,9 @@ bool receiving = true;
 // Thread de réception des données du calculateur
 void receiveARINC429Thread(int server_socket_429) {
     while (receiving) {
+        
         receiveARINC429Message(server_socket_429);
+        
     }
 }
 
@@ -132,9 +149,8 @@ void transitionManager(){
 
 
 int main() {
-
+    // Thread gérant la connexion et l'écoute AFDX
     std::thread t2(client_thread_AFDX, server_ip, server_port_AFDX); // Client AFDX
-    t2.detach();
     // Thread pour recevoir les données du calculateur
     std::thread receive429Thread(receiveARINC429Thread, server_socket_429);
  
@@ -147,14 +163,17 @@ int main() {
         UI_Process(image);
         takeoffManager();
         transitionManager();
+       
+       
+
+        
+        // Redondance: Envoi A429 puis AFDX
         sendARINC429(server_socket_429);
+
         if(AFDXSucces){
             sendAFDXMessage(server_socket_AFDX);
         }
-    
-     
-        
-
+        // Affichage de l'UI
         cv::imshow("Panneau de controle", image);
   
         // Sortir si l'utilisateur ferme la fenêtre
@@ -164,8 +183,9 @@ int main() {
             break;
         }
     }
-   
+    // Tout fermer proprement quand le programme arrête
     cv::destroyAllWindows();
+    t2.join();
     receive429Thread.join();
     close(server_socket_429);
     close(server_socket_AFDX);

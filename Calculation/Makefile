@@ -6,7 +6,7 @@ LIBS = `pkg-config --libs opencv4`
 # Fichiers source et output
 SRC = calculator.cpp  server.cpp A429.cpp AFDX.cpp
 OBJ = calculator.o server.o A429.o AFDX.o
-OUT = mon_programme
+OUT = server
 
 # Règles de compilation
 all: $(OUT)

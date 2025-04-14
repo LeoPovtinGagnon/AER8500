@@ -6,7 +6,7 @@ LIBS = `pkg-config --libs opencv4`
 # Fichiers source et output
 SRC = agregator.cpp  client.cpp A429.cpp UI.cpp AFDX.cpp
 OBJ = agregator.o client.o A429.o UI.o AFDX.o
-OUT = mon_programme
+OUT = client
 
 # Règles de compilation
 all: $(OUT)

@@ -7,16 +7,17 @@
 #include "AFDX.hpp"
 #include <stdlib.h>  
 #include <cmath>
-#include <atomic>
 #include <unistd.h> 
 #include <arpa/inet.h>
-
-
 
 // Valeurs max
 const int MAX_ALTITUDE = 40000;
 const float MAX_CLIMBRATE = 800.0;
 const int MAX_POWER = 100;
+
+// Bool à modifier pour choisir quel protocole recoit les données (redondance)
+bool protocolSelector = false; //True pour ARINC, FALSE pour AFDX
+
 
 
 // Flag qui indique que l'avion effectue une descente
@@ -31,6 +32,7 @@ bool tooMuchPowerFlag = false;
 bool notEnoughPowerFlag = false;
 // Flag indiquant que la connexion AFDX est établie
 bool AFDXSucces = false;
+
 
 
 
@@ -59,16 +61,28 @@ void server_thread_AFDX(const std::string& server_ip, int server_port_AFDX) {
     while (receiving) {
 
         if(AFDXSucces){
-
+            
+            // Réception des données par AFDX
             receiveAFDXMessage(client_socket_AFDX);
+          
+            // Redondance: envoi des données par AFDX
+            sendAFDXMessage(client_socket_AFDX);
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(5));
-       
+         std::this_thread::sleep_for(std::chrono::milliseconds(15));
     }
+       
+       
 }
+
 
 // État avionique
 avionicState currentState = AU_SOL;
+
+// Données de l'agrégateur
+uint32_t desired_altitude = 0;
+uint32_t desired_power = 0;
+float desired_angle = 0.0;
+float desired_climbRate = 0.0;
 
 // Variables (altitude, taux de montée, angle d'attaque et puissance) actuelles de l'avion
 int live_altitude = 0;
@@ -87,14 +101,16 @@ bool autopilot = false;
 // Mode d'exécution (1 sec = 1 min si true, sinon temps réel)
 bool use_seconds = true;
 
-// Thread qui monitor l'altitude actuelle et réagit aux différentes situations
-void altitudeMonitor() {
+// Thread qui monitor l'altitude actuelle et réagit aux situations
+void dataMonitor() {
     while (true) {
+       
         // Détecter si l'altitude max ou désirée est atteinte
         if ((live_altitude == desired_altitude && autopilot) || 
             (live_altitude >= MAX_ALTITUDE && !autopilot) || (live_altitude <= 0)) {
             stateManager();  
         }
+        
         if(currentState == VOL_CROISIERE && desired_angle < 0.0 && !autopilot){
 
             stateManager();
@@ -134,9 +150,12 @@ void altitudeMonitor() {
             }
         }
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+        std::this_thread::sleep_for(std::chrono::milliseconds(2));
     }
 }
+
+
+
 
 // Thread qui met à jour l'altitude
 void altitudeUpdater() {
@@ -338,10 +357,13 @@ void autopilotManager(){
  }
 
 
-// Thread de réception des données du calculateur via A429
+// Thread de réception des données de l'agrégateur via A429
 void receiveARINC429(int client_socket_429) {
     while (receiving) {
+        
         receiveARINC429Message(client_socket_429);
+       
+        std::this_thread::sleep_for(std::chrono::milliseconds(3));
     }
 }
 
@@ -350,24 +372,33 @@ int main() {
     
     // Démarage des threads  
     std::thread receiveARINC429Thread(receiveARINC429, client_socket_429);
+    receiveARINC429Thread.detach();
     std::thread AFDXSocket(server_thread_AFDX, server_ip, server_port_AFDX); // Serveur AFDX
     AFDXSocket.detach();
     std::thread altitudeThread(altitudeUpdater);  
     altitudeThread.detach();  
-    std::thread altitudeMonitorThread(altitudeMonitor);
-    altitudeMonitorThread.detach();
-
+    std::thread dataMonitorThread(dataMonitor);
+    dataMonitorThread.detach();
     // Boucle d'exécution principale
     while (true) {
 
+        // Vérification de l'état
         stateManager();
+        
+
+        // Envoi par A429
         SendValuesARINC429(client_socket_429);
-
+        
+        
       
+        
 
+       
+        
+       
     }
+    // Tout fermer proprement quand le programme arrête
     receiving = false;
-    receiveARINC429Thread.join();
     close(client_socket_429);
     close(client_socket_AFDX);
     return 0;

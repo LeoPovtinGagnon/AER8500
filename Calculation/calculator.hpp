@@ -1,3 +1,5 @@
+#include <cmath>
+#include <mutex>
 // Gestionnaire d'état
 void stateManager();
 // Gestionnaire autopilote
@@ -24,3 +26,18 @@ extern bool notEnoughPowerFlag;
 extern bool tooMuchPowerFlag;
 // Flag vrai quand l'altitude doit diminuer
 extern bool descendingFlag;
+// Variables actuelles de l'avion
+extern int live_altitude;
+extern float live_climbRate;
+extern float live_angle;
+extern int live_power;
+
+// Variables de l'agrégateur les plus récentes
+extern uint32_t desired_altitude;
+extern uint32_t desired_power;
+extern float desired_angle;
+extern float desired_climbRate;
+
+// Bool à modifier pour choisir quel protocole recoit les données (redondance)
+extern bool protocolSelector;
+

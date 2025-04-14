@@ -7,112 +7,119 @@
 #include  "calculator.hpp" 
 #include "A429.hpp"
 
-// Données de l'agrégateur
-uint32_t desired_altitude = 0;
-uint32_t desired_power = 0;
-float desired_angle = 0.0;
-float desired_climbRate = 0.0;
+
 void receiveARINC429Message(int sock) {
+
     uint32_t receivedData;
     // Réception des données via TCP
     ssize_t receivedBytes = recv(sock, &receivedData, sizeof(receivedData), 0);
-    if (receivedBytes <= 0) {
+
+    if (receivedBytes <= 0 ) {
         std::cerr << "Erreur de réception du message ARINC 429" << std::endl;
-        return;
     }
 
-    // Extraction du label (bits 1 à 8)
-    int label = receivedData & 0xFF;
-  
-  
-    // Variables pour le décodage 429 
-    int digit1 = 0;
-    int digit2 = 0;
-    int digit3 = 0;
-    int digit4 = 0;
-    int bcdValue = 0;
-    bool isNegative = false;
-    bool isMaxRate = false;
-
-
-    // Affichage du message correspondant
-    switch (label) {
-        case 0x80:
-            // Bits de SDI (0: pilotage manuel, 1: autopilote)
-            autopilot = (receivedData)>>8 & 1;
-            
-            // Extraire l'altitude
-            desired_altitude = (receivedData >> 12) & 0xFFFF;  // Extraire les bits de données
-            
-            break;
+    else if(protocolSelector){
         
-        case 0x40: 
+        std::cout<<"Réception Via ARINC429"<<std::endl;
+        // Extraction du label (bits 1 à 8)
+        int label = receivedData & 0xFF;
+    
+    
+        // Variables pour le décodage 429 
+        int digit1 = 0;
+        int digit2 = 0;
+        int digit3 = 0;
+        int digit4 = 0;
+        int bcdValue = 0;
+        bool isNegative = false;
+        bool isMaxRate = false;
 
-            // Bits de SDI (0: pilotage manuel, 1: autopilote)
-            autopilot = (receivedData)>>8 & 1;
 
-            // Vérifier si le taux de montée est maximal (bit 13 à 1)
-            isMaxRate = (receivedData & (1 << 13)) != 0;
+        // Affichage du message correspondant
+        switch (label) {
+            case 0x80:
+                // Bits de SDI (0: pilotage manuel, 1: autopilote)
+                autopilot = (receivedData)>>8 & 1;
+                
+                // Extraire l'altitude
+                desired_altitude = (receivedData >> 12) & 0xFFFF;  // Extraire les bits de données
+                
+                break;
+            
+            case 0x40: 
 
-            // Si le taux de montée est maximal (800 m/min)
-            if (isMaxRate) {
-                desired_climbRate = 800.0;
-            } 
-            else {
-                // Extraire les chiffres encodés en BCD (bits 29-27, 26-23, 22-19, 18-15)
-                 digit1 = (receivedData >> 26) & 0x7;  // Chiffre des milliers
-                 digit2 = (receivedData >> 22) & 0xF;  // Chiffre des centaines
-                 digit3 = (receivedData >> 18) & 0xF;  // Chiffre des dizaines
-                 digit4 = (receivedData >> 14) & 0xF;  // Chiffre des unités
+                // Bits de SDI (0: pilotage manuel, 1: autopilote)
+                autopilot = (receivedData)>>8 & 1;
+                
 
-            // Reconstituer le taux de montée en BCD
-            bcdValue = digit1 * 1000 + digit2 * 100 + digit3 * 10 + digit4;
-            desired_climbRate = bcdValue / 10.0;
+                // Vérifier si le taux de montée est maximal (bit 13 à 1)
+                isMaxRate = (receivedData & (1 << 13)) != 0;
 
-        
-             }
-            break;
-        case 0xC0:
+                // Si le taux de montée est maximal (800 m/min)
+                if (isMaxRate) {
+                    desired_climbRate = 800.0;
+                } 
+                else {
+                    // Extraire les chiffres encodés en BCD (bits 29-27, 26-23, 22-19, 18-15)
+                    digit1 = (receivedData >> 26) & 0x7;  // Chiffre des milliers
+                    digit2 = (receivedData >> 22) & 0xF;  // Chiffre des centaines
+                    digit3 = (receivedData >> 18) & 0xF;  // Chiffre des dizaines
+                    digit4 = (receivedData >> 14) & 0xF;  // Chiffre des unités
 
-            // Bits de SDI (0: pilotage manuel, 1: autopilote)
-            autopilot = (receivedData)>>8 & 1;
+                // Reconstituer le taux de montée en BCD
+                bcdValue = digit1 * 1000 + digit2 * 100 + digit3 * 10 + digit4;
+                desired_climbRate = bcdValue / 10.0;
 
-            // Extraire le bit de signe (bit 30)
-            isNegative = (receivedData & (1 << 29)) != 0;
+            
+                }
+                break;
+            case 0xC0:
 
-            // Extraire les chiffres encodés en BCD (bits 29-27, 26-23, 22-19)
-            digit1 = (receivedData >> 26) & 0x7;  // Chiffre des dizaines
-            digit2 = (receivedData >> 22) & 0xF;  // Chiffre des unités
-            digit3 = (receivedData >> 18) & 0xF;  // Chiffre des dixièmes
+                // Bits de SDI (0: pilotage manuel, 1: autopilote)
+                autopilot = (receivedData)>>8 & 1;
 
-            // Reconstituer l'angle en BCD
-            bcdValue = digit1 * 100 + digit2 * 10 + digit3;
-            desired_angle = bcdValue / 10.0; //Passage en float
+                // Extraire le bit de signe (bit 30)
+                isNegative = (receivedData & (1 << 29)) != 0;
 
-            // Si l'angle est négatif, appliquer la correction
-            if (isNegative) {
-                desired_angle = -1 * desired_angle;
-            }
+                // Extraire les chiffres encodés en BCD (bits 29-27, 26-23, 22-19)
+                digit1 = (receivedData >> 26) & 0x7;  // Chiffre des dizaines
+                digit2 = (receivedData >> 22) & 0xF;  // Chiffre des unités
+                digit3 = (receivedData >> 18) & 0xF;  // Chiffre des dixièmes
 
-            break;
-        case 0x10:
-            // Bits de SDI (0: pilotage manuel, 1: autopilote)
-            autopilot = (receivedData)>>8 & 1;
+                // Reconstituer l'angle en BCD
+                bcdValue = digit1 * 100 + digit2 * 10 + digit3;
+                desired_angle = bcdValue / 10.0; //Passage en float
 
-            // Extraire la puissance
-            if(desired_power == ((receivedData >> 21) & 0x7F)){
-                stagnantPowerFlag = true;
-            }  // Extraire les bits de données
-            else {
-                stagnantPowerFlag = false;
-            }
-            desired_power = (receivedData >> 21) & 0x7F;
-            break;
-        default:
-            std::cout << "Label inconnu : " << label << std::endl;
-            break;
+                // Si l'angle est négatif, appliquer la correction
+                if (isNegative) {
+                    desired_angle = -1 * desired_angle;
+                }
+
+                break;
+            case 0x10:
+                // Bits de SDI (0: pilotage manuel, 1: autopilote)
+                autopilot = (receivedData)>>8 & 1;
+
+                // Extraire la puissance
+                // Validier que la puissance est stable
+                if(desired_power == ((receivedData >> 21) & 0x7F)){
+                    stagnantPowerFlag = true;
+                }  
+                else {
+                    stagnantPowerFlag = false;
+                }
+                desired_power = (receivedData >> 21) & 0x7F;
+                break;
+            default:
+                std::cout << "Label inconnu : " << label << std::endl;
+                break;
+        }
     }
 }
+  
+
+
+
 
 
 // Fonction pour envoyer un message ARINC 429 via TCP en utilisant un socket existant

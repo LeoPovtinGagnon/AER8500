@@ -9,3 +9,4 @@ uint32_t encodeARINC429Message(int label, int value);
 // Fonction de réception et de décodage des messages du calculateur
 void receiveARINC429Message(int sock);
 
+

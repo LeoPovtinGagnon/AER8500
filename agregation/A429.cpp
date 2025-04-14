@@ -43,7 +43,7 @@ uint32_t encodeARINC429Message(int label, int value) {
         case 2:  // Taux de montée
            
             // Encodage BCD sur 4 bits 
-             encodedData |= 0x40; // Label 002
+            encodedData |= 0x40; // Label 002
 
             // Bits de SDI (0: pilotage manuel, 1: autopilote)
             encodedData |= (autopilot & 1) << 8;
@@ -125,121 +125,129 @@ uint32_t encodeARINC429Message(int label, int value) {
 
 }
 void receiveARINC429Message(int sock) {
+   
     uint32_t receivedData;
+    
+
     // Réception des données via TCP
     ssize_t receivedBytes = recv(sock, &receivedData, sizeof(receivedData), 0);
     if (receivedBytes <= 0) {
         std::cerr << "Erreur de réception du message ARINC 429" << std::endl;
-        return;
+        
     }
 
-    // Extraction du label (bits 1 à 8)
-    int label = receivedData & 0xFF;
+    else if(protocolSelector){
 
-    // Variable intermédiaire pour valider l'état
-    int state = 0;
-  
-  
-    // Variables pour le décodage 429 
-    int digit1 = 0;
-    int digit2 = 0;
-    int digit3 = 0;
-    int digit4 = 0;
-    int bcdValue = 0;
-    bool isNegative = false;
-    bool isMaxRate = false;
+         std::cout<<"Réception Via ARINC429"<<std::endl;
+
+        // Extraction du label (bits 1 à 8)
+        int label = receivedData & 0xFF;
+
+        // Variable intermédiaire pour valider l'état
+        int state = 0;
+    
+    
+        // Variables pour le décodage 429 
+        int digit1 = 0;
+        int digit2 = 0;
+        int digit3 = 0;
+        int digit4 = 0;
+        int bcdValue = 0;
+        bool isNegative = false;
+        bool isMaxRate = false;
 
 
 
-    // Affichage du message correspondant
-    switch (label) {
-        
-        case 0x80:
-            // Extraire l'altitude
-            system_altitude = (receivedData >> 12) & 0xFFFF;  // Extraire les bits de données
+        // Décodage du message en fonction du label
+        switch (label) {
             
-            // Extraire l'état du système
-            state = ((receivedData >> 10) & 0x3);
-            // Cas de l'atterissage
-            if(state == 3){
-     
-                landing_flag = true;
-                // L'avion est de retour au sol
-                currentState = AU_SOL;
-              
-            }
-
-            // Gestion des états standards
-            else{
-
-                landing_flag = false;
-                currentState = static_cast<avionicState>((receivedData >> 10) & 0x3);
-            }
-            
-            break;
+            case 0x80:
+                // Extraire l'altitude
+                system_altitude = (receivedData >> 12) & 0xFFFF;  // Extraire les bits de données
+                
+                // Extraire l'état du système
+                state = ((receivedData >> 10) & 0x3);
+                // Cas de l'atterissage
+                if(state == 3){
         
-        case 0x40: 
-            // Vérifier si le taux de montée est maximal (bit 13 à 1)
-            isMaxRate = (receivedData & (1 << 13)) != 0;
+                    landing_flag = true;
+                    // L'avion est de retour au sol
+                    currentState = AU_SOL;
+                
+                }
 
-            // Si le taux de montée est maximal (800 m/min)
-            if (isMaxRate) {
-                system_climbRate = 800.0;
-            } 
-            else {
-                // Extraire les chiffres encodés en BCD (bits 29-27, 26-23, 22-19, 18-15)
-                 digit1 = (receivedData >> 26) & 0x7;  // Chiffre des milliers
-                 digit2 = (receivedData >> 22) & 0xF;  // Chiffre des centaines
-                 digit3 = (receivedData >> 18) & 0xF;  // Chiffre des dizaines
-                 digit4 = (receivedData >> 14) & 0xF;  // Chiffre des unités
+                // Gestion des états standards
+                else{
 
-            // Reconstituer le taux de montée en BCD
-            bcdValue = digit1 * 1000 + digit2 * 100 + digit3 * 10 + digit4;
-            system_climbRate = bcdValue / 10.0;
-
-        
-             }
-            break;
-
-        case 0xC0:
-        
-            // Extraire le bit de signe (bit 30)
-            isNegative = (receivedData & (1 << 29)) != 0;
-
-            // Extraire les chiffres encodés en BCD (bits 29-27, 26-23, 22-19)
-            digit1 = (receivedData >> 26) & 0x7;  // Chiffre des dizaines
-            digit2 = (receivedData >> 22) & 0xF;  // Chiffre des unités
-            digit3 = (receivedData >> 18) & 0xF;  // Chiffre des dixièmes
-
-            // Reconstituer l'angle en BCD
-            bcdValue = digit1 * 100 + digit2 * 10 + digit3;
-            system_angle = bcdValue / 10.0; //Passage en float
-
-            // Si l'angle est négatif, appliquer la correction
-            if (isNegative) {
-                system_angle = -1 * system_angle;
-            }
-
-            break;
-     
-        case 0x10:
-            // Extraire la puissance
-            system_power = (receivedData >> 21) & 0x7F;  // Extraire les bits de données
+                    landing_flag = false;
+                    currentState = static_cast<avionicState>((receivedData >> 10) & 0x3);
+                }
+                
+                break;
             
-            
-            // Analyse du BNR pour détecter les problèmes liés à la puissance
-            // Cas problématiques
-            if(((receivedData >> 29) & 0x3) == 0){
-                power_problems_flag = true;
-            }
-            // Cas normal: pas de problème
-            else{
-                power_problems_flag = false;
-            }
+            case 0x40: 
+                // Vérifier si le taux de montée est maximal (bit 13 à 1)
+                isMaxRate = (receivedData & (1 << 13)) != 0;
 
-            break;
-        default:
-            std::cout << "Label inconnu : " << label << std::endl;
-            break;
+                // Si le taux de montée est maximal (800 m/min)
+                if (isMaxRate) {
+                    system_climbRate = 800.0;
+                } 
+                else {
+                    // Extraire les chiffres encodés en BCD (bits 29-27, 26-23, 22-19, 18-15)
+                    digit1 = (receivedData >> 26) & 0x7;  // Chiffre des milliers
+                    digit2 = (receivedData >> 22) & 0xF;  // Chiffre des centaines
+                    digit3 = (receivedData >> 18) & 0xF;  // Chiffre des dizaines
+                    digit4 = (receivedData >> 14) & 0xF;  // Chiffre des unités
+
+                // Reconstituer le taux de montée en BCD
+                bcdValue = digit1 * 1000 + digit2 * 100 + digit3 * 10 + digit4;
+                system_climbRate = bcdValue / 10.0;
+
+            
+                }
+                break;
+
+            case 0xC0:
+            
+                // Extraire le bit de signe (bit 30)
+                isNegative = (receivedData & (1 << 29)) != 0;
+
+                // Extraire les chiffres encodés en BCD (bits 29-27, 26-23, 22-19)
+                digit1 = (receivedData >> 26) & 0x7;  // Chiffre des dizaines
+                digit2 = (receivedData >> 22) & 0xF;  // Chiffre des unités
+                digit3 = (receivedData >> 18) & 0xF;  // Chiffre des dixièmes
+
+                // Reconstituer l'angle en BCD
+                bcdValue = digit1 * 100 + digit2 * 10 + digit3;
+                system_angle = bcdValue / 10.0; //Passage en float
+
+                // Si l'angle est négatif, appliquer la correction
+                if (isNegative) {
+                    system_angle = -1 * system_angle;
+                }
+
+                break;
+        
+            case 0x10:
+                // Extraire la puissance
+                system_power = (receivedData >> 21) & 0x7F;  // Extraire les bits de données
+                
+                
+                // Analyse du BNR pour détecter les problèmes liés à la puissance
+                // Cas problématiques
+                if(((receivedData >> 29) & 0x3) == 0){
+                    power_problems_flag = true;
+                }
+                // Cas normal: pas de problème
+                else{
+                    power_problems_flag = false;
+                }
+
+                break;
+            default:
+                std::cout << "Label inconnu : " << label << std::endl;
+                break;
+        }
     }
 }
