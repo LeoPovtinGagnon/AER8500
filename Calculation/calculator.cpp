@@ -16,7 +16,7 @@ const float MAX_CLIMBRATE = 800.0;
 const int MAX_POWER = 100;
 
 // Bool à modifier pour choisir quel protocole recoit les données (redondance)
-bool protocolSelector = false; //True pour ARINC, FALSE pour AFDX
+bool protocolSelector = true; //True pour ARINC, FALSE pour AFDX
 
 
 
@@ -150,7 +150,7 @@ void dataMonitor() {
             }
         }
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(2));
+        std::this_thread::sleep_for(std::chrono::milliseconds(3));
     }
 }
 
@@ -299,7 +299,7 @@ void autopilotManager(){
             precise_angle = -16.0;
         }
         // Ajustement au pied près
-        else if(altitudeGap < 5){
+        else if(altitudeGap < 3){
             
                 
             precise_angle = (0.3048 * -16.0)/(((live_power*10)+0.00001));
@@ -384,18 +384,8 @@ int main() {
 
         // Vérification de l'état
         stateManager();
-        
-
         // Envoi par A429
         SendValuesARINC429(client_socket_429);
-        
-        
-      
-        
-
-       
-        
-       
     }
     // Tout fermer proprement quand le programme arrête
     receiving = false;

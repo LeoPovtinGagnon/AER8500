@@ -17,8 +17,8 @@ float system_climbRate = 0.0;
 float system_angle = 0.0;
 int system_power = 0;
 
- // Bool à modifier pour choisir quel protocole recoit les données (redondance)
- bool protocolSelector = false; //True pour ARINC, FALSE pour AFDX
+// Bool à modifier pour choisir quel protocole recoit les données (redondance)
+bool protocolSelector = true; //True pour ARINC, FALSE pour AFDX
 
 // Variable pour arrêter les threads de réception
 bool receiving = true;
@@ -54,7 +54,6 @@ void client_thread_AFDX(const std::string& server_ip, int server_port_AFDX) {
 
             receiveAFDXMessage(server_socket_AFDX);
         
-        
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
        
@@ -83,6 +82,7 @@ void receiveARINC429Thread(int server_socket_429) {
     while (receiving) {
         
         receiveARINC429Message(server_socket_429);
+    
         
     }
 }
